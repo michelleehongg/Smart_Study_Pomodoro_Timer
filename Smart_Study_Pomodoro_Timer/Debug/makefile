@@ -90,8 +90,8 @@ all: main-build
 main-build: Smart_Study_Pomodoro_Timer.elf secondary-outputs
 
 # Tool invocations
-Smart_Study_Pomodoro_Timer.elf Smart_Study_Pomodoro_Timer.map: $(OBJS) $(USER_OBJS) C:\Users\miche\Desktop\ECEN_501_Project\Smart_Study_Pomodoro_Timer\Smart_Study_Pomodoro_Timer\STM32L475VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Smart_Study_Pomodoro_Timer.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\miche\Desktop\ECEN_501_Project\Smart_Study_Pomodoro_Timer\Smart_Study_Pomodoro_Timer\STM32L475VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Smart_Study_Pomodoro_Timer.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Smart_Study_Pomodoro_Timer.elf Smart_Study_Pomodoro_Timer.map: $(OBJS) $(USER_OBJS) C:\Users\miche\Desktop\Smart_Study_Pomodoro_Timer\Smart_Study_Pomodoro_Timer\STM32L475VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Smart_Study_Pomodoro_Timer.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\miche\Desktop\Smart_Study_Pomodoro_Timer\Smart_Study_Pomodoro_Timer\STM32L475VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Smart_Study_Pomodoro_Timer.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

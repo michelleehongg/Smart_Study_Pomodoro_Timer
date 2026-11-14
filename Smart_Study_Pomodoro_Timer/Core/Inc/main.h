@@ -49,6 +49,8 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -132,8 +134,6 @@ void Error_Handler(void);
 #define ISM43362_BOOT0_GPIO_Port GPIOB
 #define ISM43362_WAKEUP_Pin GPIO_PIN_13
 #define ISM43362_WAKEUP_GPIO_Port GPIOB
-#define LED2_Pin GPIO_PIN_14
-#define LED2_GPIO_Port GPIOB
 #define SPSGRF_915_SDN_Pin GPIO_PIN_15
 #define SPSGRF_915_SDN_GPIO_Port GPIOB
 #define INTERNAL_UART3_TX_Pin GPIO_PIN_8
@@ -218,8 +218,6 @@ void Error_Handler(void);
 #define ARD_D15_GPIO_Port GPIOB
 #define ARD_D14_Pin GPIO_PIN_9
 #define ARD_D14_GPIO_Port GPIOB
-#define ISM43362_SPI3_CSN_Pin GPIO_PIN_0
-#define ISM43362_SPI3_CSN_GPIO_Port GPIOE
 #define ISM43362_DRDY_EXTI1_Pin GPIO_PIN_1
 #define ISM43362_DRDY_EXTI1_GPIO_Port GPIOE
 
