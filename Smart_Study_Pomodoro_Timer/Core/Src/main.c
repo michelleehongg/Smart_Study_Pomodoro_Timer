@@ -18,21 +18,44 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
+//#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+#include "queue.h"
+#include "semphr.h"
+#include "event_groups.h"
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef enum{
+	IDLE, STUDYING, PAUSE, BREAK, FOCUS_REMINDER
+} StateMachineState;
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SHORT_PRESS_FLAG  (1UL << 1)
+#define LONG_PRESS_FLAG   (1UL << 2)
+#define LONG_PRESS_MS  1000
 
+#define STUDY_TIME (0.5 * 60 * 1000)
+#define STUDY_TIMER_FLAG (1UL << 3)
+
+#define BREAK_TIME (0.5 * 60 * 1000)
+#define BREAK_TIMER_FLAG (1UL << 4)
+
+
+#define PWM_MAX_DUTY       65535
+#define PWM_UPDATE_MS      100
+#define BLINK_INTERVAL_MS  100
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -49,19 +72,28 @@ QSPI_HandleTypeDef hqspi;
 
 SPI_HandleTypeDef hspi3;
 
+TIM_HandleTypeDef htim15;
+
 UART_HandleTypeDef huart1;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
+//osThreadId_t defaultTaskHandle;
+//const osThreadAttr_t defaultTask_attributes = {
+//  .name = "defaultTask",
+//  .stack_size = 128 * 4,
+//  .priority = (osPriority_t) osPriorityNormal,
+//};
 /* USER CODE BEGIN PV */
-
+TaskHandle_t xButtonTaskHandle = NULL;
+TaskHandle_t xStateTaskHandle = NULL;
+TimerHandle_t xStudyTimer = NULL;
+TimerHandle_t xBreakTimer = NULL;
+SemaphoreHandle_t xStatusMutex = NULL;
+// shared status variables
+StateMachineState currentState = IDLE;
+TickType_t remainingStudyTime = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,15 +105,25 @@ static void MX_QUADSPI_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
-void StartDefaultTask(void *argument);
+static void MX_TIM15_Init(void);
+//void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+void ButtonTask(void *pvParameters);
+void StateMachineTask(void *pvParameters);
+void UpdateLED(StateMachineState state);
+void StudyTimerCallback(TimerHandle_t xTimer);
+void BreakTimerCallback(TimerHandle_t xTimer);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+int _write(int file, char *ptr, int len) {
+	for (int i = 0; i < len; i++) {
+		ITM_SendChar((*ptr++));
+	}
+	return len;
+}
 /* USER CODE END 0 */
 
 /**
@@ -119,15 +161,20 @@ int main(void)
   MX_SPI3_Init();
   MX_USART1_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
+  MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
 
+  __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, 0);
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();
+//  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+  xStatusMutex = xSemaphoreCreateMutex();
+  if (xStatusMutex == NULL)
+	  ; //add code to handle error
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -135,7 +182,8 @@ int main(void)
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
+  xStudyTimer = xTimerCreate("Study Timer", pdMS_TO_TICKS(STUDY_TIME), pdFALSE, NULL, StudyTimerCallback);
+  xBreakTimer = xTimerCreate("Break Timer", pdMS_TO_TICKS(BREAK_TIME), pdFALSE, NULL, BreakTimerCallback);
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -144,10 +192,19 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+//  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+  BaseType_t xReturned = xTaskCreate(ButtonTask, "Button Task New", 256,
+  NULL, 1, &xButtonTaskHandle);
+  if (xReturned != pdPASS)
+  ; //add code to handle error
+
+  xReturned = xTaskCreate(StateMachineTask, "State Machine Task", 256,
+  NULL, 1, &xStateTaskHandle);
+  if (xReturned != pdPASS)
+  ; //add code to handle error
+  vTaskStartScheduler(); // start scheduler
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -155,7 +212,7 @@ int main(void)
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-  osKernelStart();
+//  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -390,6 +447,71 @@ static void MX_SPI3_Init(void)
 }
 
 /**
+  * @brief TIM15 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM15_Init(void)
+{
+
+  /* USER CODE BEGIN TIM15_Init 0 */
+
+  /* USER CODE END TIM15_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM15_Init 1 */
+
+  /* USER CODE END TIM15_Init 1 */
+  htim15.Instance = TIM15;
+  htim15.Init.Prescaler = 0;
+  htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim15.Init.Period = 65535;
+  htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim15.Init.RepetitionCounter = 0;
+  htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim15, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM15_Init 2 */
+
+  /* USER CODE END TIM15_Init 2 */
+  HAL_TIM_MspPostInit(&htim15);
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -485,8 +607,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, ARD_D10_Pin|SPBTLE_RF_RST_Pin|ARD_D9_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, ARD_D8_Pin|ISM43362_BOOT0_Pin|ISM43362_WAKEUP_Pin|LED2_Pin
-                          |SPSGRF_915_SDN_Pin|ARD_D5_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, ARD_D8_Pin|ISM43362_BOOT0_Pin|ISM43362_WAKEUP_Pin|SPSGRF_915_SDN_Pin
+                          |ARD_D5_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, USB_OTG_FS_PWR_EN_Pin|PMOD_RESET_Pin|STSAFE_A100_RESET_Pin, GPIO_PIN_RESET);
@@ -500,11 +622,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SPSGRF_915_SPI3_CSN_GPIO_Port, SPSGRF_915_SPI3_CSN_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(ISM43362_SPI3_CSN_GPIO_Port, ISM43362_SPI3_CSN_Pin, GPIO_PIN_SET);
-
-  /*Configure GPIO pins : M24SR64_Y_RF_DISABLE_Pin M24SR64_Y_GPO_Pin ISM43362_RST_Pin ISM43362_SPI3_CSN_Pin */
-  GPIO_InitStruct.Pin = M24SR64_Y_RF_DISABLE_Pin|M24SR64_Y_GPO_Pin|ISM43362_RST_Pin|ISM43362_SPI3_CSN_Pin;
+  /*Configure GPIO pins : M24SR64_Y_RF_DISABLE_Pin M24SR64_Y_GPO_Pin ISM43362_RST_Pin */
+  GPIO_InitStruct.Pin = M24SR64_Y_RF_DISABLE_Pin|M24SR64_Y_GPO_Pin|ISM43362_RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -579,10 +698,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(ARD_D6_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : ARD_D8_Pin ISM43362_BOOT0_Pin ISM43362_WAKEUP_Pin LED2_Pin
-                           SPSGRF_915_SDN_Pin ARD_D5_Pin SPSGRF_915_SPI3_CSN_Pin */
-  GPIO_InitStruct.Pin = ARD_D8_Pin|ISM43362_BOOT0_Pin|ISM43362_WAKEUP_Pin|LED2_Pin
-                          |SPSGRF_915_SDN_Pin|ARD_D5_Pin|SPSGRF_915_SPI3_CSN_Pin;
+  /*Configure GPIO pins : ARD_D8_Pin ISM43362_BOOT0_Pin ISM43362_WAKEUP_Pin SPSGRF_915_SDN_Pin
+                           ARD_D5_Pin SPSGRF_915_SPI3_CSN_Pin */
+  GPIO_InitStruct.Pin = ARD_D8_Pin|ISM43362_BOOT0_Pin|ISM43362_WAKEUP_Pin|SPSGRF_915_SDN_Pin
+                          |ARD_D5_Pin|SPSGRF_915_SPI3_CSN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -648,6 +767,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PE0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Alternate = GPIO_AF14_TIM16;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
@@ -661,7 +788,154 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void UpdateLED(StateMachineState state){
+    static uint32_t ledBrightness = 0;
+    static int32_t breathingBrightness = 0;
+    static int8_t breathingDirection = 1;
+    static uint32_t blinkCounter = 0;
 
+    if (state == IDLE)ledBrightness = 0;
+    else if (state == STUDYING) ledBrightness = PWM_MAX_DUTY;
+    else if (state == PAUSE) ledBrightness = 0;
+    else if (state == BREAK){
+    	breathingBrightness += breathingDirection * 500;
+
+    	    if (breathingBrightness >= PWM_MAX_DUTY){
+    	        breathingBrightness = PWM_MAX_DUTY;
+    	        breathingDirection = -1;
+    	    }
+    	    else if (breathingBrightness <= 0){
+    	        breathingBrightness = 0;
+    	        breathingDirection = 1;
+    	    }
+
+    	    // Apply breathing brightness
+    	    ledBrightness = breathingBrightness;
+    }
+    else if (state == FOCUS_REMINDER){
+        blinkCounter++;
+        // Toggle LED once the configured blink interval is reached
+        if ((blinkCounter * PWM_UPDATE_MS) >= BLINK_INTERVAL_MS){
+            blinkCounter = 0;
+            ledBrightness = (ledBrightness == 0) ? PWM_MAX_DUTY : 0;
+        }
+    }
+    else{
+        ledBrightness = 0;
+    }
+
+    __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, ledBrightness);
+}
+
+void StateMachineTask(void *pvParameters)
+{
+    uint32_t event;
+    for (;;){
+    	if (xTaskNotifyWait(0, UINT32_MAX, &event, 0) == pdTRUE){
+        	if (xSemaphoreTake(xStatusMutex, portMAX_DELAY) == pdTRUE){
+				if (currentState == IDLE){
+					if (event & SHORT_PRESS_FLAG){
+						currentState = STUDYING;
+						remainingStudyTime = pdMS_TO_TICKS(STUDY_TIME);
+						xTimerChangePeriod(xStudyTimer, remainingStudyTime, 0);
+					}
+				}
+				else if (currentState == STUDYING){
+					if (event & SHORT_PRESS_FLAG){
+						remainingStudyTime = xTimerGetExpiryTime(xStudyTimer) - xTaskGetTickCount();
+						xTimerStop(xStudyTimer, 0);
+						currentState = PAUSE;
+					}
+					else if (event & LONG_PRESS_FLAG){
+						xTimerStop(xStudyTimer, 0);
+						currentState = IDLE;
+					}
+					else if (event & STUDY_TIMER_FLAG){
+						xTimerChangePeriod(xBreakTimer, pdMS_TO_TICKS(BREAK_TIME), 0);
+						currentState = BREAK;
+
+					}
+				}
+				else if (currentState == PAUSE){
+					if (event & SHORT_PRESS_FLAG){
+						xTimerChangePeriod(xStudyTimer, remainingStudyTime, 0);
+						currentState = STUDYING;
+					}
+					else if (event & LONG_PRESS_FLAG){
+						xTimerStop(xStudyTimer, 0);
+						currentState = IDLE;
+					}
+				}
+				else if (currentState == BREAK){
+					if (event & LONG_PRESS_FLAG){
+						xTimerStop(xBreakTimer, 0);
+						currentState = IDLE;
+					}
+					else if (event & BREAK_TIMER_FLAG){
+						currentState = IDLE;
+						printf("CONGRATS ON A CYCLE\r\n");
+					}
+				}
+				else if (currentState == FOCUS_REMINDER){
+					if (event & LONG_PRESS_FLAG){
+						currentState = IDLE;
+					}
+				}
+				// Print the NEW state
+				if (currentState == IDLE) printf("STATE: IDLE\r\n");
+				else if (currentState == STUDYING) printf("STATE: STUDYING\r\n");
+				else if (currentState == PAUSE) printf("STATE: PAUSE\r\n");
+				else if (currentState == BREAK) printf("STATE: BREAK\r\n");
+				else if (currentState == FOCUS_REMINDER) printf("STATE: FOCUS REMINDER\r\n");
+				xSemaphoreGive(xStatusMutex);
+			}
+    	}
+    	UpdateLED(currentState);
+    	vTaskDelay(pdMS_TO_TICKS(PWM_UPDATE_MS));
+    }
+}
+
+void ButtonTask(void *pvParameters)
+{
+    uint32_t notification;
+    TickType_t startTime;
+
+    for (;;){
+        // Wait for button press notification
+        if (xTaskNotifyWait(0, UINT32_MAX, &notification, portMAX_DELAY) == pdTRUE){
+            // Record press start time
+            startTime = xTaskGetTickCount();
+
+            // Wait until button is released
+            while (HAL_GPIO_ReadPin(BUTTON_EXTI13_GPIO_Port, BUTTON_EXTI13_Pin) == GPIO_PIN_RESET){
+                vTaskDelay(pdMS_TO_TICKS(1));
+            }
+
+            // Determine press type
+            notification = ((xTaskGetTickCount() - startTime) >= pdMS_TO_TICKS(LONG_PRESS_MS))
+            ? LONG_PRESS_FLAG : SHORT_PRESS_FLAG;
+
+            // Notify state machine
+            xTaskNotify(xStateTaskHandle, notification, eSetBits);
+        }
+    }
+}
+void StudyTimerCallback(TimerHandle_t xTimer){
+    xTaskNotify(xStateTaskHandle, STUDY_TIMER_FLAG, eSetBits);
+}
+
+void BreakTimerCallback(TimerHandle_t xTimer){
+    xTaskNotify(xStateTaskHandle, BREAK_TIMER_FLAG, eSetBits);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	if (GPIO_Pin == GPIO_PIN_13) {
+		xTaskNotifyFromISR(xButtonTaskHandle, 1, eSetBits, &xHigherPriorityTaskWoken);
+		// if a higher priority task is waiting, context switch to it
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -671,16 +945,16 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
-{
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END 5 */
-}
+//void StartDefaultTask(void *argument)
+//{
+//  /* USER CODE BEGIN 5 */
+////////  /* Infinite loop */
+////////  for(;;)
+////////  {
+////////    osDelay(1);
+////////  }
+//  /* USER CODE END 5 */
+//}
 
 /**
   * @brief  Period elapsed callback in non blocking mode
