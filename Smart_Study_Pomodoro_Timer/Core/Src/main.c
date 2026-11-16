@@ -38,6 +38,24 @@ typedef enum{
 	IDLE, STUDYING, PAUSE, BREAK, FOCUS_REMINDER
 } StateMachineState;
 
+
+typedef enum { //leaadd
+    EVT_PHONE_PLACED,     // 传感器：手机放下
+    EVT_PHONE_REMOVED,    // 传感器：手机拿走
+    EVT_CHEAT_DETECTED,   // 传感器：检测到作弊
+    EVT_CMD_START,        // 手机命令
+    EVT_CMD_PAUSE,
+    EVT_CMD_RESUME,
+    EVT_CMD_RESET,
+    EVT_CMD_SET_TIME      // 手机命令：设置时长（以后用）
+} EventType;
+
+typedef struct {//leaadd
+    EventType type;
+    uint16_t  value1;     // 比如学习分钟数
+    uint16_t  value2;     // 比如休息分钟数
+} Event;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -56,6 +74,11 @@ typedef enum{
 #define PWM_MAX_DUTY       65535
 #define PWM_UPDATE_MS      100
 #define BLINK_INTERVAL_MS  100
+
+#define PHONE_PLACED_FLAG   (1UL << 5)//leaadd
+#define PHONE_REMOVED_FLAG  (1UL << 6)
+#define CHEAT_FLAG          (1UL << 7)
+#define EVENT_QUEUE_LENGTH  10
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -94,6 +117,8 @@ SemaphoreHandle_t xStatusMutex = NULL;
 // shared status variables
 StateMachineState currentState = IDLE;
 TickType_t remainingStudyTime = 0;
+
+QueueHandle_t xEventQueue = NULL; //leaadd
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -114,6 +139,8 @@ void StateMachineTask(void *pvParameters);
 void UpdateLED(StateMachineState state);
 void StudyTimerCallback(TimerHandle_t xTimer);
 void BreakTimerCallback(TimerHandle_t xTimer);
+//void ProcessEvent(uint32_t event);//leaadd
+uint32_t EventToFlag(Event *evt);//leaadd
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -187,7 +214,9 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+  xEventQueue = xQueueCreate(EVENT_QUEUE_LENGTH, sizeof(Event));//leaadd
+  if (xEventQueue == NULL)
+      ; // add code to handle error
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -826,12 +855,34 @@ void UpdateLED(StateMachineState state){
 
     __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, ledBrightness);
 }
+uint32_t EventToFlag(Event *evt)//leaadd
+{
+    switch (evt->type){
+        case EVT_CMD_START:
+        case EVT_CMD_PAUSE:
+        case EVT_CMD_RESUME:     return SHORT_PRESS_FLAG;   // 效果和短按一样
+        case EVT_CMD_RESET:      return LONG_PRESS_FLAG;    // 效果和长按一样
+        case EVT_PHONE_PLACED:   return PHONE_PLACED_FLAG;
+        case EVT_PHONE_REMOVED:  return PHONE_REMOVED_FLAG;
+        case EVT_CHEAT_DETECTED: return CHEAT_FLAG;
+        default:                 return 0;
+    }
+}
 
 void StateMachineTask(void *pvParameters)
 {
     uint32_t event;
     for (;;){
-    	if (xTaskNotifyWait(0, UINT32_MAX, &event, 0) == pdTRUE){
+    	//if (xTaskNotifyWait(0, UINT32_MAX, &event, 0) == pdTRUE){
+    	Event evt;
+    	BaseType_t gotEvent = xTaskNotifyWait(0, UINT32_MAX, &event, 0);
+    	// 没有按键/定时器通知时，再看看 queue 里有没有消息
+    	if (gotEvent != pdTRUE && xQueueReceive(xEventQueue, &evt, 0) == pdTRUE){
+    	    event = EventToFlag(&evt);
+    	    gotEvent = pdTRUE;
+    	}
+    	if (gotEvent == pdTRUE){
+
         	if (xSemaphoreTake(xStatusMutex, portMAX_DELAY) == pdTRUE){
 				if (currentState == IDLE){
 					if (event & SHORT_PRESS_FLAG){
@@ -917,6 +968,11 @@ void ButtonTask(void *pvParameters)
 
             // Notify state machine
             xTaskNotify(xStateTaskHandle, notification, eSetBits);
+
+
+             // tested queue could work
+           // Event evt = { .type = (notification == SHORT_PRESS_FLAG) ? EVT_CMD_START : EVT_CMD_RESET };
+           // xQueueSend(xEventQueue, &evt, 0);//testleaadd
         }
     }
 }
