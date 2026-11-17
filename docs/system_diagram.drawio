@@ -1,0 +1,230 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="mI8Y2yoVK8ikhxh240Gd">
+    <mxGraphModel dx="2054" dy="1194" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="eb4a5jS1VTDGKQYo38t--1" parent="1" style="text;html=1;fontSize=18;align=left;verticalAlign=middle;" value="&lt;b&gt;Smart Study Pomodoro Timer — System Diagram (FreeRTOS API)&lt;/b&gt;&lt;br&gt;Updated Nov 16 by Lea" vertex="1">
+          <mxGeometry height="50" width="700" x="480" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#1f5fbf;strokeWidth=3;fontSize=12;" value="&lt;b&gt;Added today (Lea)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="140" x="1200" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" value="Done (Michelle)" vertex="1">
+          <mxGeometry height="30" width="100" x="1345" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" value="Partly done" vertex="1">
+          <mxGeometry height="30" width="90" x="1470" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" value="To do" vertex="1">
+          <mxGeometry height="30" width="80" x="1570" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" value="Hardware / outside" vertex="1">
+          <mxGeometry height="30" width="140" x="1660" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--7" parent="1" style="text;html=1;align=center;fontSize=14;" value="&lt;b&gt;Hardware&lt;/b&gt;" vertex="1">
+          <mxGeometry height="25" width="180" x="480" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--8" parent="1" style="text;html=1;align=center;fontSize=14;" value="&lt;b&gt;Interrupts / HW Timer&lt;/b&gt;" vertex="1">
+          <mxGeometry height="25" width="190" x="700" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--9" parent="1" style="text;html=1;align=center;fontSize=14;" value="&lt;b&gt;FreeRTOS Tasks&lt;/b&gt;" vertex="1">
+          <mxGeometry height="25" width="260" x="940" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--10" parent="1" style="text;html=1;align=center;fontSize=14;" value="&lt;b&gt;RTOS Communication&lt;/b&gt;" vertex="1">
+          <mxGeometry height="25" width="200" x="1270" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--11" parent="1" style="text;html=1;align=center;fontSize=14;" value="&lt;b&gt;State Machine + SW Timers&lt;/b&gt;" vertex="1">
+          <mxGeometry height="25" width="270" x="1530" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" value="User button&lt;br&gt;PC13 (EXTI13)" vertex="1">
+          <mxGeometry height="60" width="180" x="480" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" value="Magnetometer LIS3MDL&lt;br&gt;DRDY → PC8 (EXTI8)" vertex="1">
+          <mxGeometry height="60" width="180" x="480" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" value="ToF VL53L0X&lt;br&gt;I2C2 (read every N ms)" vertex="1">
+          <mxGeometry height="60" width="180" x="480" y="615" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--15" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" value="LED2 (PB14)" vertex="1">
+          <mxGeometry height="50" width="180" x="480" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="&lt;b&gt;HAL_GPIO_EXTI_Callback&lt;/b&gt;&lt;br&gt;PIN 13 → xTaskNotifyFromISR&lt;br&gt;&lt;i&gt;(Michelle)&lt;/i&gt;" vertex="1">
+          <mxGeometry height="70" width="190" x="700" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" value="&lt;b&gt;PIN 8 callback&lt;/b&gt;&lt;br&gt;Done: EXTI8 set in GPIO init&lt;br&gt;To do: handle PIN 8 in callback" vertex="1">
+          <mxGeometry height="70" width="190" x="700" y="495" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="&lt;b&gt;TIM15 CH1 PWM&lt;/b&gt; (Michelle)&lt;br&gt;PSC=0, ARR=65535&lt;br&gt;about 1.2 kHz" vertex="1">
+          <mxGeometry height="60" width="190" x="700" y="835" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--19" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=8;" value="&lt;b&gt;ButtonTask&lt;/b&gt; (Michelle)&lt;br&gt;Gets notification → waits for release → measures press time&lt;br&gt;&amp;lt; 1 s = short press, ≥ 1 s = long press" vertex="1">
+          <mxGeometry height="80" width="260" x="940" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--20" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=8;" value="&lt;b&gt;Activity Monitoring Task&lt;/b&gt; (to do)&lt;br&gt;- Add BSP sensor drivers to project&lt;br&gt;- Read magnetometer on DRDY&lt;br&gt;- Baseline + filter + hysteresis&lt;br&gt;- Read ToF every N ms&lt;br&gt;- 4-case sensor fusion&lt;br&gt;- Send events with xQueueSend" vertex="1">
+          <mxGeometry height="150" width="260" x="940" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--21" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=8;" value="&lt;b&gt;Wi-Fi Task &lt;/b&gt;&amp;nbsp;(to do)&lt;br&gt;- Port Wi-Fi driver (lab 5)&lt;br&gt;- Fix SPI3 setup and EXTI1 interrupt&lt;br&gt;- Send status / alerts to phone&lt;br&gt;- Get commands, send with xQueueSend" vertex="1">
+          <mxGeometry height="120" width="260" x="940" y="665" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" value="Phone&lt;br&gt;TCP server app" vertex="1">
+          <mxGeometry height="50" width="200" x="970" y="845" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#1f5fbf;strokeWidth=3;fontSize=11;" value="&lt;b&gt;EventToFlag()&lt;/b&gt; NEW&lt;br&gt;turns a queue event into a flag&lt;br&gt;the state machine already knows" vertex="1">
+          <mxGeometry height="70" width="200" x="1270" y="415" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--24" parent="1" style="shape=process;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#1f5fbf;strokeWidth=3;fontSize=11;" value="&lt;b&gt;xEventQueue&lt;/b&gt; NEW&lt;br&gt;Message Queue (10 events)&lt;br&gt;Event = { type, value1, value2 }" vertex="1">
+          <mxGeometry height="80" width="200" x="1270" y="525" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--25" parent="1" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;size=0.1;" value="&lt;b&gt;xStatusMutex&lt;/b&gt;&lt;br&gt;Done (Michelle): created, used by state machine&lt;br&gt;To do: Wi-Fi Task reads it" vertex="1">
+          <mxGeometry height="80" width="200" x="1270" y="685" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--26" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=8;" value="&lt;b&gt;StateMachineTask&lt;/b&gt; (runs every 100 ms)&lt;br&gt;Done (Michelle): check notification flags → change state&lt;br&gt;Done (Michelle): IDLE / STUDYING / PAUSE / BREAK&lt;br&gt;Done (Michelle): UpdateLED() for LED effects&lt;br&gt;&lt;font color=&quot;#1f5fbf&quot;&gt;&lt;b&gt;NEW: if no notification, read 1 event from queue&lt;/b&gt;&lt;/font&gt;&lt;br&gt;To do: enter / leave FOCUS REMINDER" vertex="1">
+          <mxGeometry height="140" width="270" x="1530" y="385" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--27" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Study timer (Michelle) — now 30 s for testing" vertex="1">
+          <mxGeometry height="40" width="270" x="1530" y="575" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--28" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Break timer (Michelle) — now 30 s for testing" vertex="1">
+          <mxGeometry height="40" width="270" x="1530" y="625" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--29" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" value="Grace period timer (10 s) — to do" vertex="1">
+          <mxGeometry height="40" width="270" x="1530" y="675" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--30" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="eb4a5jS1VTDGKQYo38t--16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--31" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" target="eb4a5jS1VTDGKQYo38t--19" value="task notification">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--32" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" target="eb4a5jS1VTDGKQYo38t--26" value="xTaskNotify&lt;br&gt;SHORT_PRESS_FLAG / LONG_PRESS_FLAG">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1500" y="360" />
+              <mxPoint x="1500" y="405" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--33" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="eb4a5jS1VTDGKQYo38t--17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--34" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;dashed=1;" target="eb4a5jS1VTDGKQYo38t--20" value="notification (to do)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--35" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;dashed=1;" target="eb4a5jS1VTDGKQYo38t--20" value="I2C read">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="910" y="645" />
+              <mxPoint x="910" y="575" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--36" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;dashed=1;" target="eb4a5jS1VTDGKQYo38t--24" value="EVT_PHONE_PLACED&lt;br&gt;EVT_PHONE_REMOVED&lt;br&gt;EVT_CHEAT_DETECTED">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--37" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;dashed=1;" target="eb4a5jS1VTDGKQYo38t--24" value="EVT_CMD_START / PAUSE /&lt;br&gt;RESUME / RESET / SET_TIME">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1240" y="695" />
+              <mxPoint x="1240" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--38" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;strokeColor=#1f5fbf;strokeWidth=3;fontColor=#1f5fbf;" target="eb4a5jS1VTDGKQYo38t--23" value="xQueueReceive">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--39" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;strokeColor=#1f5fbf;strokeWidth=3;fontColor=#1f5fbf;" target="eb4a5jS1VTDGKQYo38t--26" value="flag">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--40" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;startArrow=block;fontSize=10;" target="eb4a5jS1VTDGKQYo38t--26" value="Timer callback → xTaskNotify&lt;br&gt;STUDY_TIMER_FLAG / BREAK_TIMER_FLAG&lt;br&gt;(state machine starts / stops timers)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1830" y="595" />
+              <mxPoint x="1830" y="455" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--41" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" target="eb4a5jS1VTDGKQYo38t--25" value="write">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1560" y="550" />
+              <mxPoint x="1510" y="550" />
+              <mxPoint x="1510" y="725" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--42" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;dashed=1;" target="eb4a5jS1VTDGKQYo38t--21" value="read (to do)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="755" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--43" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0;exitY=0.93;" target="eb4a5jS1VTDGKQYo38t--18" value="UpdateLED() sets duty cycle">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1485" y="515" />
+              <mxPoint x="1485" y="925" />
+              <mxPoint x="795" y="925" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--44" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" target="eb4a5jS1VTDGKQYo38t--15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--45" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;startArrow=block;fontSize=10;dashed=1;" target="eb4a5jS1VTDGKQYo38t--22" value="TCP over Wi-Fi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--46" parent="1" style="text;html=1;align=left;fontSize=14;" value="&lt;b&gt;State Machine (inside StateMachineTask)&lt;/b&gt;    Green states and arrows: done by Michelle. Long press: any state (not IDLE) → IDLE" vertex="1">
+          <mxGeometry height="30" width="800" x="480" y="950" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--47" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" value="IDLE" vertex="1">
+          <mxGeometry height="60" width="130" x="500" y="1055" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--48" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" value="STUDYING" vertex="1">
+          <mxGeometry height="60" width="150" x="840" y="1055" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--49" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" value="BREAK" vertex="1">
+          <mxGeometry height="60" width="130" x="1220" y="1055" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--50" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" value="PAUSE" vertex="1">
+          <mxGeometry height="60" width="130" x="640" y="1235" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--51" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontStyle=1;" value="FOCUS REMINDER" vertex="1">
+          <mxGeometry height="60" width="170" x="1050" y="1235" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--52" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;" value="&lt;b&gt;Who did what&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;b&gt;Michelle (done):&lt;/b&gt;&lt;br&gt;- Button interrupt + ButtonTask (short / long press)&lt;br&gt;- StateMachineTask: IDLE, STUDYING, PAUSE, BREAK&lt;br&gt;- Study timer and break timer&lt;br&gt;- PWM LED effects (TIM15, UpdateLED)&lt;br&gt;- xStatusMutex&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#1f5fbf&quot;&gt;&lt;b&gt;Lea (added Nov 16):&lt;/b&gt;&lt;br&gt;- Message queue xEventQueue + Event format&lt;br&gt;- EventToFlag()&lt;br&gt;- StateMachineTask reads the queue&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;b&gt;Next:&lt;/b&gt;&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="300" width="400" x="1400" y="995" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--53" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--47" style="html=1;endArrow=block;fontSize=11;" target="eb4a5jS1VTDGKQYo38t--48" value="short press">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--54" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--48" style="html=1;endArrow=block;fontSize=11;" target="eb4a5jS1VTDGKQYo38t--49" value="study time up">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--55" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--49" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=11;exitX=0.5;exitY=0;entryX=0.5;entryY=0;" target="eb4a5jS1VTDGKQYo38t--47" value="break time up → one cycle done, back to IDLE">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1285" y="1005" />
+              <mxPoint x="565" y="1005" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--56" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--48" style="html=1;endArrow=block;fontSize=11;exitX=0.2;exitY=1;entryX=0.8;entryY=0;" target="eb4a5jS1VTDGKQYo38t--50" value="short press">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--57" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--50" style="html=1;endArrow=block;fontSize=11;exitX=1;exitY=0.3;entryX=0.35;entryY=1;" target="eb4a5jS1VTDGKQYo38t--48" value="short press">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--58" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--48" style="html=1;endArrow=block;fontSize=11;exitX=0.8;exitY=1;entryX=0.2;entryY=0;fontColor=#b85450;dashed=1;strokeColor=#b85450;" target="eb4a5jS1VTDGKQYo38t--51" value="to do: grace time up / cheat found">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4a5jS1VTDGKQYo38t--59" edge="1" parent="1" source="eb4a5jS1VTDGKQYo38t--51" style="html=1;endArrow=block;fontSize=11;exitX=0.6;exitY=0;entryX=1;entryY=0.8;fontColor=#b85450;dashed=1;strokeColor=#b85450;" target="eb4a5jS1VTDGKQYo38t--48" value="to do: phone put back">
+          <mxGeometry relative="1" x="-0.0089" y="-9" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
