@@ -40,20 +40,20 @@ typedef enum{
 
 
 typedef enum { //leaadd
-    EVT_PHONE_PLACED,     // 传感器：手机放下
-    EVT_PHONE_REMOVED,    // 传感器：手机拿走
-    EVT_CHEAT_DETECTED,   // 传感器：检测到作弊
-    EVT_CMD_START,        // 手机命令
-    EVT_CMD_PAUSE,
-    EVT_CMD_RESUME,
-    EVT_CMD_RESET,
-    EVT_CMD_SET_TIME      // 手机命令：设置时长（以后用）
+    EVT_PHONE_PLACED,     // sensor: phone is on the board
+    EVT_PHONE_REMOVED,    // sensor: phone was picked up
+    EVT_CHEAT_DETECTED,   // sensor: non-phone object on the board
+ //   EVT_CMD_START,        // phone command
+ //   EVT_CMD_PAUSE,
+ //   EVT_CMD_RESUME,
+  //  EVT_CMD_RESET,
+    EVT_CMD_SET_TIME      // phone command: set study/break time (for later)
 } EventType;
 
 typedef struct {//leaadd
     EventType type;
-    uint16_t  value1;     // 比如学习分钟数
-    uint16_t  value2;     // 比如休息分钟数
+    uint16_t  value1;     // e.g. study minutes
+    uint16_t  value2;     // e.g. break minutes
 } Event;
 
 /* USER CODE END PTD */
@@ -64,10 +64,12 @@ typedef struct {//leaadd
 #define LONG_PRESS_FLAG   (1UL << 2)
 #define LONG_PRESS_MS  1000
 
-#define STUDY_TIME (0.5 * 60 * 1000)
+//#define STUDY_TIME (0.5 * 60 * 1000)
+#define DEFAULT_STUDY_TIME_MS  (30 * 1000)   // default 30 s for testing
 #define STUDY_TIMER_FLAG (1UL << 3)
 
-#define BREAK_TIME (0.5 * 60 * 1000)
+//#define BREAK_TIME (0.5 * 60 * 1000)
+#define DEFAULT_BREAK_TIME_MS  (30 * 1000)   // default 30 s for testing
 #define BREAK_TIMER_FLAG (1UL << 4)
 
 
@@ -119,6 +121,8 @@ StateMachineState currentState = IDLE;
 TickType_t remainingStudyTime = 0;
 
 QueueHandle_t xEventQueue = NULL; //leaadd
+uint32_t studyTimeMs = DEFAULT_STUDY_TIME_MS;   // can be changed by SET_TIME
+uint32_t breakTimeMs = DEFAULT_BREAK_TIME_MS;   // can be changed by SET_TIME
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -141,6 +145,7 @@ void StudyTimerCallback(TimerHandle_t xTimer);
 void BreakTimerCallback(TimerHandle_t xTimer);
 //void ProcessEvent(uint32_t event);//leaadd
 uint32_t EventToFlag(Event *evt);//leaadd
+void HandleSetTime(Event *evt);//leaadd
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -209,8 +214,8 @@ int main(void)
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
-  xStudyTimer = xTimerCreate("Study Timer", pdMS_TO_TICKS(STUDY_TIME), pdFALSE, NULL, StudyTimerCallback);
-  xBreakTimer = xTimerCreate("Break Timer", pdMS_TO_TICKS(BREAK_TIME), pdFALSE, NULL, BreakTimerCallback);
+  xStudyTimer = xTimerCreate("Study Timer", pdMS_TO_TICKS(studyTimeMs), pdFALSE, NULL, StudyTimerCallback);
+  xBreakTimer = xTimerCreate("Break Timer", pdMS_TO_TICKS(breakTimeMs), pdFALSE, NULL, BreakTimerCallback);
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -855,17 +860,31 @@ void UpdateLED(StateMachineState state){
 
     __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, ledBrightness);
 }
+
 uint32_t EventToFlag(Event *evt)//leaadd
 {
     switch (evt->type){
-        case EVT_CMD_START:
-        case EVT_CMD_PAUSE:
-        case EVT_CMD_RESUME:     return SHORT_PRESS_FLAG;   // 效果和短按一样
-        case EVT_CMD_RESET:      return LONG_PRESS_FLAG;    // 效果和长按一样
+   //     case EVT_CMD_START:
+   //     case EVT_CMD_PAUSE:
+    //    case EVT_CMD_RESUME:     return SHORT_PRESS_FLAG;   // same as short press
+    //    case EVT_CMD_RESET:      return LONG_PRESS_FLAG;    // same as long press
         case EVT_PHONE_PLACED:   return PHONE_PLACED_FLAG;
         case EVT_PHONE_REMOVED:  return PHONE_REMOVED_FLAG;
         case EVT_CHEAT_DETECTED: return CHEAT_FLAG;
         default:                 return 0;
+    }
+}
+void HandleSetTime(Event *evt)//leaadd
+{
+    if (xSemaphoreTake(xStatusMutex, portMAX_DELAY) == pdTRUE){
+        if (currentState == IDLE){
+            studyTimeMs = evt->value1 * 60UL * 1000UL;   // minutes -> ms
+            breakTimeMs = evt->value2 * 60UL * 1000UL;   // minutes -> ms
+            printf("SET_TIME: study %d min, break %d min\r\n", evt->value1, evt->value2);
+        } else {
+            printf("SET_TIME ignored: only allowed in IDLE\r\n");
+        }
+        xSemaphoreGive(xStatusMutex);
     }
 }
 
@@ -876,18 +895,28 @@ void StateMachineTask(void *pvParameters)
     	//if (xTaskNotifyWait(0, UINT32_MAX, &event, 0) == pdTRUE){
     	Event evt;
     	BaseType_t gotEvent = xTaskNotifyWait(0, UINT32_MAX, &event, 0);
-    	// 没有按键/定时器通知时，再看看 queue 里有没有消息
+    	// If there is no notification, check the queue
+    	/*
     	if (gotEvent != pdTRUE && xQueueReceive(xEventQueue, &evt, 0) == pdTRUE){
     	    event = EventToFlag(&evt);
     	    gotEvent = pdTRUE;
+    	}*/
+    	if (gotEvent != pdTRUE && xQueueReceive(xEventQueue, &evt, 0) == pdTRUE){ //leaadd
+    	    if (evt.type == EVT_CMD_SET_TIME){
+    	        HandleSetTime(&evt);          // SET_TIME: change durations
+    	    } else {
+    	        event = EventToFlag(&evt);    // other events: turn into a flag
+    	        gotEvent = pdTRUE;
+    	    }
     	}
+
     	if (gotEvent == pdTRUE){
 
         	if (xSemaphoreTake(xStatusMutex, portMAX_DELAY) == pdTRUE){
 				if (currentState == IDLE){
 					if (event & SHORT_PRESS_FLAG){
 						currentState = STUDYING;
-						remainingStudyTime = pdMS_TO_TICKS(STUDY_TIME);
+						remainingStudyTime = pdMS_TO_TICKS(studyTimeMs);
 						xTimerChangePeriod(xStudyTimer, remainingStudyTime, 0);
 					}
 				}
@@ -902,7 +931,7 @@ void StateMachineTask(void *pvParameters)
 						currentState = IDLE;
 					}
 					else if (event & STUDY_TIMER_FLAG){
-						xTimerChangePeriod(xBreakTimer, pdMS_TO_TICKS(BREAK_TIME), 0);
+						xTimerChangePeriod(xBreakTimer, pdMS_TO_TICKS(breakTimeMs), 0);
 						currentState = BREAK;
 
 					}
@@ -965,6 +994,13 @@ void ButtonTask(void *pvParameters)
             // Determine press type
             notification = ((xTaskGetTickCount() - startTime) >= pdMS_TO_TICKS(LONG_PRESS_MS))
             ? LONG_PRESS_FLAG : SHORT_PRESS_FLAG;
+
+            // TEST ONLY: long press sends a fake SET_TIME (1 min study, 1 min break)
+         //   if (notification == LONG_PRESS_FLAG){//leaadd
+         //       Event evt = { .type = EVT_CMD_SET_TIME, .value1 = 1, .value2 = 1 };
+         //       xQueueSend(xEventQueue, &evt, 0);
+        //    }
+
 
             // Notify state machine
             xTaskNotify(xStateTaskHandle, notification, eSetBits);
