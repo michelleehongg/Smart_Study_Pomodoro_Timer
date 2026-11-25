@@ -30,6 +30,9 @@
 #include "event_groups.h"
 #include <stdio.h>
 #include <string.h>
+
+#include "wifi.h"//leaadd
+#include "es_wifi_io.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,20 +43,20 @@ typedef enum{
 
 
 typedef enum { //leaadd
-    EVT_PHONE_PLACED,     // 传感器：手机放下
-    EVT_PHONE_REMOVED,    // 传感器：手机拿走
-    EVT_CHEAT_DETECTED,   // 传感器：检测到作弊
-    EVT_CMD_START,        // 手机命令
-    EVT_CMD_PAUSE,
-    EVT_CMD_RESUME,
-    EVT_CMD_RESET,
-    EVT_CMD_SET_TIME      // 手机命令：设置时长（以后用）
+    EVT_PHONE_PLACED,     // sensor: phone is on the board
+    EVT_PHONE_REMOVED,    // sensor: phone was picked up
+    EVT_CHEAT_DETECTED,   // sensor: non-phone object on the board
+ //   EVT_CMD_START,        // phone command
+ //   EVT_CMD_PAUSE,
+ //   EVT_CMD_RESUME,
+  //  EVT_CMD_RESET,
+    EVT_CMD_SET_TIME      // phone command: set study/break time (for later)
 } EventType;
 
 typedef struct {//leaadd
     EventType type;
-    uint16_t  value1;     // 比如学习分钟数
-    uint16_t  value2;     // 比如休息分钟数
+    uint16_t  value1;     // e.g. study minutes
+    uint16_t  value2;     // e.g. break minutes
 } Event;
 
 /* USER CODE END PTD */
@@ -64,10 +67,12 @@ typedef struct {//leaadd
 #define LONG_PRESS_FLAG   (1UL << 2)
 #define LONG_PRESS_MS  1000
 
-#define STUDY_TIME (0.5 * 60 * 1000)
+//#define STUDY_TIME (0.5 * 60 * 1000)
+#define DEFAULT_STUDY_TIME_MS  (30 * 1000)   // default 30 s for testing
 #define STUDY_TIMER_FLAG (1UL << 3)
 
-#define BREAK_TIME (0.5 * 60 * 1000)
+//#define BREAK_TIME (0.5 * 60 * 1000)
+#define DEFAULT_BREAK_TIME_MS  (30 * 1000)   // default 30 s for testing
 #define BREAK_TIMER_FLAG (1UL << 4)
 
 
@@ -79,6 +84,13 @@ typedef struct {//leaadd
 #define PHONE_REMOVED_FLAG  (1UL << 6)
 #define CHEAT_FLAG          (1UL << 7)
 #define EVENT_QUEUE_LENGTH  10
+/* Update SSID and PASSWORD with own Access point settings */
+#define WIFI_SSID     "iPhone"
+#define WIFI_PASSWORD "handsome"
+
+#define REMOTE_PORT          8002
+#define WIFI_WRITE_TIMEOUT   10000   // ms
+#define WIFI_READ_TIMEOUT    1000    // ms, shorter than lab 5 (10 s)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -114,11 +126,16 @@ TaskHandle_t xStateTaskHandle = NULL;
 TimerHandle_t xStudyTimer = NULL;
 TimerHandle_t xBreakTimer = NULL;
 SemaphoreHandle_t xStatusMutex = NULL;
+TaskHandle_t xWiFiTaskHandle = NULL;//leaadd
 // shared status variables
 StateMachineState currentState = IDLE;
 TickType_t remainingStudyTime = 0;
 
 QueueHandle_t xEventQueue = NULL; //leaadd
+uint32_t studyTimeMs = DEFAULT_STUDY_TIME_MS;   // can be changed by SET_TIME
+uint32_t breakTimeMs = DEFAULT_BREAK_TIME_MS;   // can be changed by SET_TIME
+uint8_t RemoteIP[] = {172, 20, 10, 1};   // phone hotspot IP
+int32_t wifiSocket = -1;                 // -1 = not connected yet
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -141,6 +158,10 @@ void StudyTimerCallback(TimerHandle_t xTimer);
 void BreakTimerCallback(TimerHandle_t xTimer);
 //void ProcessEvent(uint32_t event);//leaadd
 uint32_t EventToFlag(Event *evt);//leaadd
+void HandleSetTime(Event *evt);//leaadd
+void WiFiTask(void *pvParameters);//leaadd
+void HandlePhoneCommand(char *cmd, char *reply, size_t replyLen);//leaadd
+const char *StateName(StateMachineState s);//leaadd
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -191,8 +212,24 @@ int main(void)
   MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
-
   __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, 0);
+  /* TEST: connect to Wi-Fi before starting the scheduler */
+  //leaadd
+  /*
+  printf("Wi-Fi init...\r\n");
+  if (WIFI_Init() == WIFI_STATUS_OK) {
+      printf("Wi-Fi module initialized\r\n");
+      if (WIFI_Connect(WIFI_SSID, WIFI_PASSWORD, WIFI_ECN_WPA2_PSK) == WIFI_STATUS_OK) {
+          uint8_t ip[4];
+          WIFI_GetIP_Address(ip, sizeof(ip));
+          printf("Wi-Fi connected, IP: %d.%d.%d.%d\r\n", ip[0], ip[1], ip[2], ip[3]);
+      } else {
+          printf("Wi-Fi connect FAILED\r\n");
+      }
+  } else {
+      printf("Wi-Fi init FAILED\r\n");
+  }
+  */
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -209,8 +246,8 @@ int main(void)
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
-  xStudyTimer = xTimerCreate("Study Timer", pdMS_TO_TICKS(STUDY_TIME), pdFALSE, NULL, StudyTimerCallback);
-  xBreakTimer = xTimerCreate("Break Timer", pdMS_TO_TICKS(BREAK_TIME), pdFALSE, NULL, BreakTimerCallback);
+  xStudyTimer = xTimerCreate("Study Timer", pdMS_TO_TICKS(studyTimeMs), pdFALSE, NULL, StudyTimerCallback);
+  xBreakTimer = xTimerCreate("Break Timer", pdMS_TO_TICKS(breakTimeMs), pdFALSE, NULL, BreakTimerCallback);
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -233,6 +270,11 @@ int main(void)
   NULL, 1, &xStateTaskHandle);
   if (xReturned != pdPASS)
   ; //add code to handle error
+  xReturned = xTaskCreate(WiFiTask, "WiFi Task", 512, NULL, 1, &xWiFiTaskHandle);
+  if (xReturned != pdPASS)
+	  printf("WiFi task create FAILED, free heap = %u bytes\r\n", (unsigned)xPortGetFreeHeapSize());
+      ; // add code to handle error
+
   vTaskStartScheduler(); // start scheduler
   /* USER CODE END RTOS_THREADS */
 
@@ -817,6 +859,136 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+const char *StateName(StateMachineState s)//leaadd
+{
+    switch (s) {
+        case IDLE:           return "IDLE";
+        case STUDYING:       return "STUDYING";
+        case PAUSE:          return "PAUSE";
+        case BREAK:          return "BREAK";
+        case FOCUS_REMINDER: return "FOCUS REMINDER";
+        default:             return "UNKNOWN";
+    }
+}
+void HandlePhoneCommand(char *cmd, char *reply, size_t replyLen)//leaadd
+{
+    int study, brk;
+
+    /* 1. Check the format: "SET <study> <break>" */
+    if (sscanf(cmd, "SET %d %d", &study, &brk) != 2) {
+        snprintf(reply, replyLen, "ERROR: please send SET <study> <break>\r\n");
+        return;
+    }
+
+    /* 2. Check the range */
+    if (study < 1 || study > 60 || brk < 1 || brk > 30) {
+        snprintf(reply, replyLen, "ERROR: study 1-60 min, break 1-30 min\r\n");
+        return;
+    }
+
+    /* 3. Only allowed in IDLE (read shared state with the mutex) */
+    StateMachineState state;
+    xSemaphoreTake(xStatusMutex, portMAX_DELAY);
+    state = currentState;
+    xSemaphoreGive(xStatusMutex);
+    if (state != IDLE) {
+        snprintf(reply, replyLen, "ERROR: please set time in IDLE\r\n");
+        return;
+    }
+
+    /* 4. Send SET_TIME event to the state machine */
+    Event evt = { .type = EVT_CMD_SET_TIME, .value1 = study, .value2 = brk };
+    if (xQueueSend(xEventQueue, &evt, 0) == pdTRUE) {
+        snprintf(reply, replyLen, "OK: study %d min, break %d min\r\n", study, brk);
+    } else {
+        snprintf(reply, replyLen, "ERROR: busy, try again\r\n");
+    }
+}
+void WiFiTask(void *pvParameters)//leaadd
+{
+    printf("WiFi task started\r\n");
+
+    /* 1. Init Wi-Fi module */
+    if (WIFI_Init() != WIFI_STATUS_OK) {
+        printf("Wi-Fi init FAILED\r\n");
+        vTaskDelete(NULL);   // stop this task, other tasks keep running
+    }
+
+    /* 2. Connect to phone hotspot (retry up to 5 times) */
+    int tries = 0;
+    while (WIFI_Connect(WIFI_SSID, WIFI_PASSWORD, WIFI_ECN_WPA2_PSK) != WIFI_STATUS_OK) {
+        tries++;
+        printf("Wi-Fi connect failed, retry %d\r\n", tries);
+        if (tries >= 5) {
+            printf("Wi-Fi connect FAILED, give up\r\n");
+            vTaskDelete(NULL);
+        }
+        vTaskDelay(pdMS_TO_TICKS(2000));   // wait 2 s, then try again
+    }
+
+    uint8_t ip[4];
+    WIFI_GetIP_Address(ip, sizeof(ip));
+    printf("Wi-Fi connected, IP: %d.%d.%d.%d\r\n", ip[0], ip[1], ip[2], ip[3]);
+    /* 3. Connect to the TCP server on the phone (retry) */
+    printf("Connecting to %d.%d.%d.%d:%d ...\r\n",
+           RemoteIP[0], RemoteIP[1], RemoteIP[2], RemoteIP[3], REMOTE_PORT);
+    tries = 0;
+    while (WIFI_OpenClientConnection(0, WIFI_TCP_PROTOCOL, "TCP_CLIENT",
+                                     RemoteIP, REMOTE_PORT, 0) != WIFI_STATUS_OK) {
+        tries++;
+        printf("TCP connect failed, retry %d\r\n", tries);
+        if (tries >= 10) {
+            printf("TCP connect FAILED, give up\r\n");
+            vTaskDelete(NULL);
+        }
+        WIFI_CloseClientConnection(0);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }
+    wifiSocket = 0;
+    printf("TCP connected\r\n");
+
+    /* 4. Say hello to the phone */
+    char hello[] = "Pomodoro timer connected!\r\n";
+    uint16_t sentLen;
+   // WIFI_SendData(wifiSocket, (uint8_t *)hello, strlen(hello), &sentLen, WIFI_WRITE_TIMEOUT);
+    if (WIFI_SendData(wifiSocket, (uint8_t *)hello, strlen(hello), &sentLen, WIFI_WRITE_TIMEOUT) == WIFI_STATUS_OK) {
+        printf("Sent to phone: %s", hello);
+    } else {
+        printf("Send to phone FAILED\r\n");
+    }
+    printf("WiFi task free stack: %u words\r\n", (unsigned)uxTaskGetStackHighWaterMark(NULL));
+    /* 5. Main loop: receive commands from the phone */
+    static uint8_t rxData[128];
+    uint16_t rxLen;
+    char reply[80];
+    StateMachineState lastState = IDLE;   // the state we sent last time
+    for (;;) {
+        if (WIFI_ReceiveData(wifiSocket, rxData, sizeof(rxData) - 1, &rxLen, WIFI_READ_TIMEOUT) == WIFI_STATUS_OK
+            && rxLen > 0) {
+            rxData[rxLen] = 0;                      // end the string
+            printf("Received: %s\r\n", rxData);
+            HandlePhoneCommand((char *)rxData, reply, sizeof(reply));
+            WIFI_SendData(wifiSocket, (uint8_t *)reply, strlen(reply), &sentLen, WIFI_WRITE_TIMEOUT);
+            printf("Sent: %s", reply);
+        }
+
+        /* 6. Send state changes to the phone */
+        StateMachineState nowState;
+        xSemaphoreTake(xStatusMutex, portMAX_DELAY);
+        nowState = currentState;
+        xSemaphoreGive(xStatusMutex);
+
+        if (nowState != lastState) {
+            char msg[48];
+            snprintf(msg, sizeof(msg), "STATE: %s\r\n", StateName(nowState));
+            WIFI_SendData(wifiSocket, (uint8_t *)msg, strlen(msg), &sentLen, WIFI_WRITE_TIMEOUT);
+            printf("Sent: %s", msg);
+            lastState = nowState;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100));             // let other tasks run
+    }
+}
 void UpdateLED(StateMachineState state){
     static uint32_t ledBrightness = 0;
     static int32_t breathingBrightness = 0;
@@ -855,39 +1027,64 @@ void UpdateLED(StateMachineState state){
 
     __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, ledBrightness);
 }
+
 uint32_t EventToFlag(Event *evt)//leaadd
 {
     switch (evt->type){
-        case EVT_CMD_START:
-        case EVT_CMD_PAUSE:
-        case EVT_CMD_RESUME:     return SHORT_PRESS_FLAG;   // 效果和短按一样
-        case EVT_CMD_RESET:      return LONG_PRESS_FLAG;    // 效果和长按一样
+   //     case EVT_CMD_START:
+   //     case EVT_CMD_PAUSE:
+    //    case EVT_CMD_RESUME:     return SHORT_PRESS_FLAG;   // same as short press
+    //    case EVT_CMD_RESET:      return LONG_PRESS_FLAG;    // same as long press
         case EVT_PHONE_PLACED:   return PHONE_PLACED_FLAG;
         case EVT_PHONE_REMOVED:  return PHONE_REMOVED_FLAG;
         case EVT_CHEAT_DETECTED: return CHEAT_FLAG;
         default:                 return 0;
     }
 }
+void HandleSetTime(Event *evt)//leaadd
+{
+    if (xSemaphoreTake(xStatusMutex, portMAX_DELAY) == pdTRUE){
+        if (currentState == IDLE){
+            studyTimeMs = evt->value1 * 60UL * 1000UL;   // minutes -> ms
+            breakTimeMs = evt->value2 * 60UL * 1000UL;   // minutes -> ms
+            printf("SET_TIME: study %d min, break %d min\r\n", evt->value1, evt->value2);
+        } else {
+            printf("SET_TIME ignored: only allowed in IDLE\r\n");
+        }
+        xSemaphoreGive(xStatusMutex);
+    }
+}
 
 void StateMachineTask(void *pvParameters)
 {
     uint32_t event;
+    printf("SM task started\r\n");    //
     for (;;){
     	//if (xTaskNotifyWait(0, UINT32_MAX, &event, 0) == pdTRUE){
     	Event evt;
     	BaseType_t gotEvent = xTaskNotifyWait(0, UINT32_MAX, &event, 0);
-    	// 没有按键/定时器通知时，再看看 queue 里有没有消息
+    	// If there is no notification, check the queue
+    	/*
     	if (gotEvent != pdTRUE && xQueueReceive(xEventQueue, &evt, 0) == pdTRUE){
     	    event = EventToFlag(&evt);
     	    gotEvent = pdTRUE;
+    	}*/
+    	if (gotEvent != pdTRUE && xQueueReceive(xEventQueue, &evt, 0) == pdTRUE){ //leaadd
+    	    if (evt.type == EVT_CMD_SET_TIME){
+    	        HandleSetTime(&evt);          // SET_TIME: change durations
+    	    } else {
+    	        event = EventToFlag(&evt);    // other events: turn into a flag
+    	        gotEvent = pdTRUE;
+    	    }
     	}
+
     	if (gotEvent == pdTRUE){
 
         	if (xSemaphoreTake(xStatusMutex, portMAX_DELAY) == pdTRUE){
 				if (currentState == IDLE){
 					if (event & SHORT_PRESS_FLAG){
 						currentState = STUDYING;
-						remainingStudyTime = pdMS_TO_TICKS(STUDY_TIME);
+						remainingStudyTime = pdMS_TO_TICKS(studyTimeMs);
 						xTimerChangePeriod(xStudyTimer, remainingStudyTime, 0);
 					}
 				}
@@ -902,7 +1099,7 @@ void StateMachineTask(void *pvParameters)
 						currentState = IDLE;
 					}
 					else if (event & STUDY_TIMER_FLAG){
-						xTimerChangePeriod(xBreakTimer, pdMS_TO_TICKS(BREAK_TIME), 0);
+						xTimerChangePeriod(xBreakTimer, pdMS_TO_TICKS(breakTimeMs), 0);
 						currentState = BREAK;
 
 					}
@@ -966,6 +1163,13 @@ void ButtonTask(void *pvParameters)
             notification = ((xTaskGetTickCount() - startTime) >= pdMS_TO_TICKS(LONG_PRESS_MS))
             ? LONG_PRESS_FLAG : SHORT_PRESS_FLAG;
 
+            // TEST ONLY: long press sends a fake SET_TIME (1 min study, 1 min break)
+         //   if (notification == LONG_PRESS_FLAG){//leaadd
+         //       Event evt = { .type = EVT_CMD_SET_TIME, .value1 = 1, .value2 = 1 };
+         //       xQueueSend(xEventQueue, &evt, 0);
+        //    }
+
+
             // Notify state machine
             xTaskNotify(xStateTaskHandle, notification, eSetBits);
 
@@ -991,6 +1195,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		// if a higher priority task is waiting, context switch to it
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
+	else if (GPIO_Pin == GPIO_PIN_1) {   // leaadd: Wi-Fi module DRDY pin (PE1)
+			SPI_WIFI_ISR();
+		}
+
 }
 /* USER CODE END 4 */
 

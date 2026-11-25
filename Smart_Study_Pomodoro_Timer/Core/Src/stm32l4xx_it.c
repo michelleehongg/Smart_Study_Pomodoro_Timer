@@ -209,5 +209,22 @@ void TIM6_DAC_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+extern SPI_HandleTypeDef hspi;   // Wi-Fi SPI handle, defined in es_wifi_io.c
+//告诉编译器"有一个叫 hspi 的变量，定义在别的文件里"（在 es_wifi_io.c 里）。注意 Wi-Fi 驱动用的是自己的 hspi，不是 CubeMX 生成的 hspi3
+
+/* Wi-Fi module DRDY pin (PE1) interrupt */
+void EXTI1_IRQHandler(void)
+{
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
+  //DRDY 引脚一有变化就进来，交给 HAL 处理，HAL 最后会调用 HAL_GPIO_EXTI_Callback
+}
+
+/* Wi-Fi SPI3 interrupt */
+void SPI3_IRQHandler(void)
+{
+  HAL_SPI_IRQHandler(&hspi);
+  //SPI3 传完数据就进来，交给 HAL 处理
+}
+
 
 /* USER CODE END 1 */
